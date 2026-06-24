@@ -287,7 +287,7 @@ function buildFounderGrids(){
     HOURS.forEach((hr,hi)=>{
       const tl=document.createElement('div');
       tl.className='cell time-lbl';
-      tl.textContent=hr.half?'':hr.label;
+      tl.textContent=hr.label;
       grid.appendChild(tl);
       w.dates.forEach((date,di)=>{
         const sk=slotKey(w.key,di,hi);
@@ -563,7 +563,7 @@ function renderTeamView(responses,teamName){
       html+=`<div style="width:52px;height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#888;gap:1px">${date.day}<span style="font-weight:400;color:#bbb;font-size:9px">${date.d}</span></div>`;
     });
     HOURS.forEach((hr,hi)=>{
-      html+=`<div style="width:58px;height:22px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:10px;color:#999">${hr.half?'':hr.label}</div>`;
+      html+=`<div style="width:58px;height:22px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:10px;color:#999">${hr.label}</div>`;
       w.dates.forEach((date,di)=>{
         const sk=slotKey(w.key,di,hi);
         const cnt=counts[sk]||0;
