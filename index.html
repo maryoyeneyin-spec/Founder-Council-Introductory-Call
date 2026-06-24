@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L2M Intro Calls — Scheduling</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f1;color:#1a1a1a;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #e5e5e0;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.topbar-logo{font-size:14px;font-weight:600;letter-spacing:-0.01em;color:#1a1a1a}
+.topbar-logo span{color:#888}
+.tabs{display:flex;gap:4px}
+.tab{padding:7px 14px;border:none;border-radius:6px;font-size:13px;cursor:pointer;background:transparent;color:#666;font-family:inherit;transition:all 0.15s}
+.tab:hover{background:#f0efe9;color:#1a1a1a}
+.tab.active{background:#1a1a1a;color:#fff}
+.container{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
+.page{display:none}
+.page.active{display:block}
+.page-header{margin-bottom:1.5rem}
+.page-header h1{font-size:22px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px}
+.page-header p{font-size:14px;color:#666;line-height:1.6}
+.tz-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:#fff8e1;border:1px solid #f9d94e;border-radius:20px;font-size:12px;font-weight:600;color:#7a5c00;margin-bottom:1.25rem}
+.card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:1.5rem;margin-bottom:1.25rem}
+.field-section{margin-bottom:1.5rem}
+.field-section label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#888;display:block;margin-bottom:8px}
+.field-section input,.field-section select{width:100%;padding:9px 13px;border:1px solid #e0e0db;border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:#1a1a1a;outline:none;transition:border-color 0.15s;appearance:none}
+.field-section input:focus,.field-section select:focus{border-color:#1a1a1a}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem}
+.instructions{background:#f0f7ff;border:1px solid #c8dff7;border-radius:10px;padding:14px 16px;margin-bottom:1.25rem;font-size:13px;color:#1a3a5c;line-height:1.6}
+.instructions strong{display:block;margin-bottom:6px;font-size:14px;color:#1a1a1a}
+.instructions ol{padding-left:1.25rem}
+.instructions ol li{margin-bottom:4px}
+.slot-counter{display:flex;gap:12px;flex-wrap:wrap;position:sticky;top:56px;z-index:90;background:#f5f4f1;padding:10px 0;margin-bottom:1rem;border-bottom:1px solid #e5e5e0}
+.slot-counter-item{font-size:12px;color:#666;background:#fff;border:1px solid #e5e5e0;border-radius:6px;padding:4px 10px}
+.slot-counter-item span{font-weight:600;color:#16a37f}
+.week-block{margin-bottom:2rem}
+.week-title{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.week-title::after{content:'';flex:1;height:1px;background:#e5e5e0}
+.drag-hint{font-size:11px;color:#aaa;margin-bottom:6px}
+.scroll-hint{font-size:11px;color:#aaa;margin-bottom:4px;display:none}
+.grid-scroll{overflow-x:auto;padding-bottom:4px}
+.grid{display:inline-grid;gap:2px}
+.cell{display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;user-select:none;transition:all 0.1s}
+.cell.slot{width:52px;height:22px;background:#f5f4f1;border:1px solid #e5e5e0;color:#aaa}
+.cell.slot:hover{border-color:#999;background:#eee}
+.cell.slot.on{background:#16a37f;border-color:#128f6e;color:#fff}
+.cell.slot.half-marker{background:#f9f9f7;border-color:#ece9e0}
+.cell.time-lbl{width:58px;height:22px;font-size:10px;color:#999;justify-content:flex-end;padding-right:8px;cursor:default;background:transparent;border:none}
+.cell.day-lbl{width:52px;height:28px;font-size:10px;color:#888;flex-direction:column;gap:1px;cursor:default;background:transparent;border:none;font-weight:600}
+.cell.day-lbl span{font-weight:400;color:#bbb;font-size:9px}
+.cell.corner{width:58px;height:28px;background:transparent;border:none;cursor:default}
+.clear-week-btn{font-size:11px;color:#999;background:none;border:none;cursor:pointer;font-family:inherit;padding:0;margin-left:8px;text-decoration:underline}
+.clear-week-btn:hover{color:#991b1b}
+.submit-btn{width:100%;padding:11px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:opacity 0.15s;margin-top:0.5rem}
+.submit-btn:hover{opacity:0.85}
+.submit-btn:disabled{opacity:0.4;cursor:not-allowed}
+.toast{display:none;margin-top:1rem;padding:11px 16px;background:#e8f7f2;border:1px solid #b2dfd1;border-radius:8px;color:#0f6e56;font-size:13px}
+.toast.error{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.saved-banner{display:none;margin-top:0.75rem;padding:10px 14px;background:#e8f7f2;border:1px solid #b2dfd1;border-radius:8px;color:#0f6e56;font-size:13px;align-items:center;gap:8px}
+.saved-banner.visible{display:flex}
+.confirm-summary{display:none;margin-top:1rem;padding:14px 16px;background:#f0f7ff;border:1px solid #c8dff7;border-radius:8px;font-size:13px;color:#1a3a5c}
+.confirm-summary strong{display:block;margin-bottom:8px;font-size:14px;color:#1a1a1a}
+.confirm-summary-week{margin-bottom:6px}
+.confirm-summary-week b{display:block;font-size:12px;color:#555;margin-bottom:2px}
+.confirm-summary-slots{font-size:12px;color:#444;line-height:1.7}
+.loading-slots{font-size:12px;color:#aaa;font-style:italic;margin-bottom:8px}
+.password-overlay{position:absolute;top:0;left:0;right:0;min-height:400px;display:flex;align-items:center;justify-content:center;background:#f5f4f1;padding:2rem}
+.password-card{background:#fff;border:1px solid #e5e5e0;border-radius:12px;padding:2rem;width:100%;max-width:360px;text-align:center}
+.password-card h2{font-size:16px;font-weight:600;margin-bottom:6px}
+.password-card p{font-size:13px;color:#666;margin-bottom:1.25rem}
+.password-card input{width:100%;padding:9px 13px;border:1px solid #e0e0db;border-radius:8px;font-size:14px;font-family:inherit;text-align:center;letter-spacing:0.1em;outline:none;margin-bottom:10px}
+.password-card input:focus{border-color:#1a1a1a}
+.password-card button{width:100%;padding:10px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+.password-card button:hover{opacity:0.85}
+.password-error{font-size:12px;color:#991b1b;margin-top:8px;display:none}
+.team-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1.5rem}
+.team-tab{padding:6px 12px;border:1px solid #e5e5e0;border-radius:20px;font-size:12px;cursor:pointer;background:#fff;color:#555;font-family:inherit;transition:all 0.15s}
+.team-tab:hover{border-color:#999;color:#1a1a1a}
+.team-tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1.5rem;align-items:center}
+.pill{padding:4px 10px;border-radius:20px;font-size:12px;background:#f0efe9;border:1px solid #e5e5e0;color:#555}
+.resp-count{font-size:13px;color:#666;margin-right:4px}
+.best-section h2,.heat-section h2{font-size:14px;font-weight:600;margin-bottom:12px;color:#1a1a1a}
+.best-slot{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid #e5e5e0;border-radius:8px;margin-bottom:6px;background:#fff;flex-wrap:wrap}
+.best-slot-label{font-size:13px;min-width:200px;color:#1a1a1a}
+.bar-wrap{flex:1;height:7px;background:#f0efe9;border-radius:4px;overflow:hidden;min-width:60px}
+.bar-fill{height:100%;background:#16a37f;border-radius:4px}
+.bar-score{font-size:12px;color:#888;min-width:36px;text-align:right}
+.confirm-btn{padding:5px 10px;border:1px solid #16a37f;border-radius:6px;font-size:11px;cursor:pointer;background:#fff;color:#16a37f;font-family:inherit;white-space:nowrap;transition:all 0.15s}
+.confirm-btn:hover{background:#16a37f;color:#fff}
+.heat-section{margin-top:1.5rem}
+.heat-week-title{font-size:12px;font-weight:600;color:#888;margin:1.25rem 0 10px;text-transform:uppercase;letter-spacing:0.06em}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.25rem}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#888}
+.legend-swatch{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,0.08)}
+.empty-state{text-align:center;padding:3rem 1rem;color:#aaa}
+.empty-state .icon{font-size:36px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+.loading{text-align:center;padding:2rem;color:#aaa;font-size:14px}
+.reset-btn{padding:7px 14px;border:1px solid #fca5a5;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#991b1b;font-family:inherit;float:right;margin-bottom:1rem}
+.reset-btn:hover{background:#fef2f2}
+.status-table{width:100%;border-collapse:collapse;font-size:13px}
+.status-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#888;border-bottom:1px solid #e5e5e0}
+.status-table td{padding:9px 12px;border-bottom:1px solid #f0efe9}
+.status-table tr:last-child td{border-bottom:none}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.status-badge.done{background:#e8f7f2;color:#0f6e56}
+.status-badge.pending{background:#fef9ec;color:#92660a}
+.no-responses{font-size:13px;color:#aaa;padding:1rem 0}
+@media(max-width:600px){
+  .field-row{grid-template-columns:1fr}
+  .topbar{padding:0 1rem}
+  .topbar-logo span{display:none}
+  .container{padding:1.25rem 1rem}
+  .cell.slot{width:38px;height:20px}
+  .cell.day-lbl{width:38px}
+  .cell.time-lbl{width:48px;font-size:9px}
+  .cell.corner{width:48px}
+  .scroll-hint{display:block}
+  .tabs .tab{padding:6px 10px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">Lab2Market Launch <span>/ EIR Intro Calls</span></div>
+  <div class="tabs">
+    <button class="tab active" onclick="showPage('founder',this)">Availability Form</button>
+    <button class="tab" onclick="showPage('organizer',this)">Organizer View</button>
+  </div>
+</div>
+
+<div class="container">
+  <div id="founder" class="page active">
+    <div class="page-header">
+      <h1>Share your availability</h1>
+      <p>Select every slot that works for you between September 2–16. Your EIR intro call is one hour, Monday–Friday between 8am and 6pm.</p>
+    </div>
+    <div class="tz-badge">🕐 All times are Pacific Time (PT)</div>
+    <div class="instructions">
+      <strong>How to fill this out</strong>
+      <ol>
+        <li>Enter your name and select your team from the dropdown</li>
+        <li>Your available time slots will appear below — click or drag to select every slot that works for you</li>
+        <li>Make sure to fill in all three weeks — Sep 2–4, Sep 7–11, and Sep 14–16</li>
+        <li>Hit "Save my availability" when you're done — you can come back and update anytime</li>
+      </ol>
+    </div>
+    <div class="card">
+      <div class="field-row">
+        <div class="field-section">
+          <label>Your name</label>
+          <input type="text" id="founder-name" placeholder="First and last name" onblur="onNameBlur()" />
+        </div>
+        <div class="field-section">
+          <label>Your team</label>
+          <select id="founder-team" onchange="onTeamChange()">
+            <option value="">Select your team...</option>
+            <option>AY Sensors</option>
+            <option>Cement Dioxide</option>
+            <option>Intellicycle</option>
+            <option>Local Connect</option>
+            <option>OncoNext Therapy</option>
+            <option>RoadAlly</option>
+            <option>ScaleUp</option>
+            <option>Xpsilon</option>
+            <option>Zalvatech</option>
+          </select>
+        </div>
+      </div>
+      <div id="slot-counter" class="slot-counter" style="display:none"></div>
+      <div id="grids-container"><p style="font-size:13px;color:#aaa;padding:1rem 0">👆 Select your team above to see availability slots.</p></div>
+      <button class="submit-btn" id="submit-btn" onclick="submitAvailability()">Save my availability →</button>
+      <div class="toast" id="toast"></div>
+      <div class="saved-banner" id="saved-banner">✓ Your availability has been saved successfully. You can update it anytime by re-submitting.</div>
+      <div class="confirm-summary" id="confirm-summary">
+        <strong>Your selected slots</strong>
+        <div id="confirm-summary-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="organizer" class="page" style="position:relative;min-height:400px">
+    <div id="password-overlay" class="password-overlay">
+      <div class="password-card">
+        <h2>Organizer access</h2>
+        <p>Enter the password to view responses and manage settings.</p>
+        <input type="password" id="password-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPassword()" />
+        <button onclick="checkPassword()">Enter →</button>
+        <div class="password-error" id="password-error">Incorrect password. Please try again.</div>
+      </div>
+    </div>
+    <div id="org-inner" style="display:none">
+      <div class="page-header">
+        <h1>Organizer view</h1>
+        <p>Filter by team to see each team's best available slots for their EIR intro call.</p>
+      </div>
+      <div id="org-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://xvvqripkovebllvvnyeg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dnFyaXBrb3ZlYmxsdnZueWVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNDY0NzQsImV4cCI6MjA5NzcyMjQ3NH0.Ca8s1b821IzvRu5G10bkzrthWzuZzmv4MgZ3jNne7DI';
+const ORG_PASSWORD = 'L2M2026';
+const TABLE = 'intro_responses';
+
+const TEAMS = ['AY Sensors','Cement Dioxide','Intellicycle','Local Connect','OncoNext Therapy','RoadAlly','ScaleUp','Xpsilon','Zalvatech'];
+
+const WEEKS = [
+  {label:'Week of Sep 2', key:'w1', dates:[{d:'Sep 2',day:'Wed'},{d:'Sep 3',day:'Thu'},{d:'Sep 4',day:'Fri'}]},
+  {label:'Week of Sep 7', key:'w2', dates:[{d:'Sep 7',day:'Mon'},{d:'Sep 8',day:'Tue'},{d:'Sep 9',day:'Wed'},{d:'Sep 10',day:'Thu'},{d:'Sep 11',day:'Fri'}]},
+  {label:'Week of Sep 14', key:'w3', dates:[{d:'Sep 14',day:'Mon'},{d:'Sep 15',day:'Tue'},{d:'Sep 16',day:'Wed'}]}
+];
+
+const HOURS = [];
+for(let h=8;h<18;h++){
+  HOURS.push({label:h===12?'12pm':h<12?h+'am':(h-12)+'pm', val:h, min:0, half:false});
+  HOURS.push({label:(h===12?'12':h<12?h:h-12)+':30'+(h<12?'am':'pm'), val:h, min:30, half:true});
+}
+
+let selected = {};
+let orgUnlocked = false;
+let activeTeam = TEAMS[0];
+
+function slotKey(wkey,di,hi){ return `${wkey}_${di}_${hi}`; }
+
+function formatHour(h,min){
+  const suffix = h<12?'am':'pm';
+  const dh = h===0?12:h>12?h-12:h;
+  return min===0?`${dh}${suffix}`:`${dh}:30${suffix}`;
+}
+
+function updateCounter(){
+  const counter = document.getElementById('slot-counter');
+  if(!counter) return;
+  counter.style.display='flex';
+  counter.innerHTML = WEEKS.map(w=>{
+    const count = w.dates.reduce((acc,date,di)=>{
+      return acc + HOURS.filter((hr,hi)=>selected[slotKey(w.key,di,hi)]).length;
+    },0);
+    return `<div class="slot-counter-item">${w.label.replace('Week of ','')}: <span>${count} slot${count!==1?'s':''} selected</span></div>`;
+  }).join('');
+}
+
+function clearWeek(wkey){
+  const week = WEEKS.find(w=>w.key===wkey);
+  if(!week) return;
+  week.dates.forEach((date,di)=>{
+    HOURS.forEach((hr,hi)=>{
+      const sk = slotKey(wkey,di,hi);
+      selected[sk]=false;
+      const cell = document.querySelector(`[data-key="${sk}"]`);
+      if(cell) cell.classList.remove('on');
+    });
+  });
+  updateCounter();
+}
+
+function buildFounderGrids(){
+  const c = document.getElementById('grids-container');
+  c.innerHTML='';
+  WEEKS.forEach(w=>{
+    const block = document.createElement('div');
+    block.className='week-block';
+    block.innerHTML=`<div class="week-title">${w.label} <button class="clear-week-btn" onclick="clearWeek('${w.key}')">Clear week</button></div><div class="scroll-hint">← Swipe to see all days →</div><div class="drag-hint">Click or drag to select slots</div>`;
+    const scroll = document.createElement('div');
+    scroll.className='grid-scroll';
+    const grid = document.createElement('div');
+    grid.className='grid';
+    grid.style.gridTemplateColumns=`58px repeat(${w.dates.length},52px)`;
+    const corner=document.createElement('div');
+    corner.className='cell corner';
+    grid.appendChild(corner);
+    w.dates.forEach(date=>{
+      const lbl=document.createElement('div');
+      lbl.className='cell day-lbl';
+      lbl.innerHTML=`${date.day}<span>${date.d}</span>`;
+      grid.appendChild(lbl);
+    });
+    HOURS.forEach((hr,hi)=>{
+      const tl=document.createElement('div');
+      tl.className='cell time-lbl';
+      tl.textContent=hr.half?'':hr.label;
+      grid.appendChild(tl);
+      w.dates.forEach((date,di)=>{
+        const sk=slotKey(w.key,di,hi);
+        const cell=document.createElement('div');
+        cell.className='cell slot'+(hr.half?' half-marker':'')+(selected[sk]?' on':'');
+        cell.dataset.key=sk;
+        cell.addEventListener('mousedown',e=>{e.preventDefault();toggleCell(sk,cell);});
+        cell.addEventListener('mouseenter',e=>{if(e.buttons===1)toggleCell(sk,cell);});
+        grid.appendChild(cell);
+      });
+    });
+    scroll.appendChild(grid);
+    block.appendChild(scroll);
+    c.appendChild(block);
+  });
+  updateCounter();
+}
+
+function toggleCell(key,cell){
+  selected[key]=!selected[key];
+  cell.classList.toggle('on',!!selected[key]);
+  updateCounter();
+}
+
+async function onTeamChange(){
+  selected={};
+  const team=document.getElementById('founder-team').value;
+  if(!team) return;
+  document.getElementById('saved-banner').classList.remove('visible');
+  document.getElementById('confirm-summary').style.display='none';
+  buildFounderGrids();
+  const name=document.getElementById('founder-name').value.trim();
+  if(name) await loadPreviousSelections(name,team);
+}
+
+function onNameBlur(){
+  const name=document.getElementById('founder-name').value.trim();
+  const team=document.getElementById('founder-team').value;
+  if(name&&team) loadPreviousSelections(name,team);
+}
+
+async function loadPreviousSelections(name,team){
+  const c=document.getElementById('grids-container');
+  const hint=document.createElement('div');
+  hint.className='loading-slots';
+  hint.id='loading-hint';
+  hint.textContent='Checking for previous submissions...';
+  c.insertBefore(hint,c.firstChild);
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?founder_name=eq.${encodeURIComponent(name)}&team=eq.${encodeURIComponent(team)}&select=slots`,{
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    const rows=await res.json();
+    if(rows&&rows.length>0){
+      const slots=JSON.parse(rows[0].slots||'[]');
+      slots.forEach(sk=>{
+        selected[sk]=true;
+        const cell=document.querySelector(`[data-key="${sk}"]`);
+        if(cell) cell.classList.add('on');
+      });
+      updateCounter();
+      const h=document.getElementById('loading-hint');
+      if(h) h.textContent='✓ Previous selections loaded — adjust as needed and resubmit.';
+      setTimeout(()=>{const h=document.getElementById('loading-hint');if(h)h.remove();},3000);
+    } else {
+      const h=document.getElementById('loading-hint');if(h)h.remove();
+    }
+  } catch(e){
+    const h=document.getElementById('loading-hint');if(h)h.remove();
+  }
+}
+
+async function submitAvailability(){
+  const name=document.getElementById('founder-name').value.trim();
+  const team=document.getElementById('founder-team').value;
+  if(!name){document.getElementById('founder-name').focus();showToast('Please enter your name.','error');return;}
+  if(!team){document.getElementById('founder-team').focus();showToast('Please select your team.','error');return;}
+  const slots=Object.keys(selected).filter(k=>selected[k]);
+  if(!slots.length){showToast('Please select at least one available slot.','error');return;}
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='Saving...';
+  try{
+    const checkRes=await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?founder_name=eq.${encodeURIComponent(name)}&team=eq.${encodeURIComponent(team)}&select=id`,{
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    const existing=await checkRes.json();
+    if(existing&&existing.length>0){
+      await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?founder_name=eq.${encodeURIComponent(name)}&team=eq.${encodeURIComponent(team)}`,{
+        method:'PATCH',
+        headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({slots:JSON.stringify(slots)})
+      });
+    } else {
+      await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`,{
+        method:'POST',
+        headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({founder_name:name,team:team,slots:JSON.stringify(slots)})
+      });
+    }
+    showToast('✓ Saved! You can update your availability anytime by re-submitting.','success');
+    document.getElementById('saved-banner').classList.add('visible');
+    showConfirmSummary();
+  } catch(e){
+    showToast('Something went wrong. Please try again.','error');
+  }
+  btn.disabled=false;btn.textContent='Save my availability →';
+}
+
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast'+(type==='error'?' error':'');
+  t.style.display='block';
+  setTimeout(()=>t.style.display='none',4000);
+}
+
+function showConfirmSummary(){
+  const summary=document.getElementById('confirm-summary');
+  const body=document.getElementById('confirm-summary-body');
+  let hasAny=false;
+  let html='';
+  WEEKS.forEach(w=>{
+    const byDate={};
+    w.dates.forEach((date,di)=>{
+      HOURS.forEach((hr,hi)=>{
+        const sk=slotKey(w.key,di,hi);
+        if(selected[sk]){
+          const dk=`${date.d} (${date.day})`;
+          if(!byDate[dk]) byDate[dk]=[];
+          byDate[dk].push(hr.label);
+          hasAny=true;
+        }
+      });
+    });
+    if(Object.keys(byDate).length){
+      html+=`<div class="confirm-summary-week"><b>${w.label}</b><div class="confirm-summary-slots">`;
+      Object.entries(byDate).forEach(([dk,times])=>{html+=`${dk}: ${times.join(', ')}<br>`;});
+      html+=`</div></div>`;
+    }
+  });
+  if(hasAny){body.innerHTML=html;summary.style.display='block';}
+}
+
+function checkPassword(){
+  const input=document.getElementById('password-input').value;
+  if(input===ORG_PASSWORD){
+    orgUnlocked=true;
+    document.getElementById('password-overlay').style.display='none';
+    document.getElementById('org-inner').style.display='block';
+    buildOrgView();
+  } else {
+    document.getElementById('password-error').style.display='block';
+    document.getElementById('password-input').value='';
+    document.getElementById('password-input').focus();
+  }
+}
+
+function heatStyle(count,max){
+  if(!count) return {bg:'#f5f4f1',border:'#e5e5e0',color:'#ccc'};
+  const r=count/max;
+  if(r<=0.25) return {bg:'#d1f0e6',border:'#a3ddd0',color:'#0f6e56'};
+  if(r<=0.5)  return {bg:'#5dcaa5',border:'#1d9e75',color:'#fff'};
+  if(r<=0.75) return {bg:'#16a37f',border:'#0f8468',color:'#fff'};
+  return {bg:'#0a6b53',border:'#085041',color:'#fff'};
+}
+
+async function buildOrgView(){
+  const c=document.getElementById('org-content');
+  c.innerHTML='<div class="loading">Loading responses...</div>';
+  let rows=[];
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=founder_name,team,slots`,{
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    rows=await res.json();
+  } catch(e){
+    c.innerHTML='<div class="card"><div class="empty-state"><p>Could not load responses. Check your connection and try again.</p></div></div>';
+    return;
+  }
+  const teamData={};
+  TEAMS.forEach(t=>teamData[t]={});
+  rows.forEach(r=>{
+    if(r.team&&teamData[r.team]!==undefined){
+      try{teamData[r.team][r.founder_name]=JSON.parse(r.slots||'[]');}catch(e){teamData[r.team][r.founder_name]=[];}
+    }
+  });
+
+  let html=`<button class="reset-btn" onclick="resetResponses()">Clear all responses</button>`;
+
+  let statusHtml=`<div class="card" style="margin-bottom:1.25rem"><h2 style="font-size:14px;font-weight:600;margin-bottom:12px">Response status</h2><table class="status-table"><thead><tr><th>Team</th><th>Status</th><th>Respondents</th></tr></thead><tbody>`;
+  TEAMS.forEach(t=>{
+    const tNames=Object.keys(teamData[t]);
+    const responded=tNames.length>0;
+    statusHtml+=`<tr><td style="font-weight:500">${t}</td><td><span class="status-badge ${responded?'done':'pending'}">${responded?'✓ Responded':'⏳ Pending'}</span></td><td style="color:#666">${responded?tNames.join(', '):'—'}</td></tr>`;
+  });
+  statusHtml+=`</tbody></table></div>`;
+  html+=statusHtml;
+
+  html+=`<div class="team-tabs">`;
+  TEAMS.forEach(t=>{
+    const count=Object.keys(teamData[t]).length;
+    html+=`<button class="team-tab${t===activeTeam?' active':''}" onclick="switchTeam('${t}',this)">${t}${count>0?` <span style="opacity:0.6">(${count})</span>`:''}</button>`;
+  });
+  html+=`</div><div id="team-view"></div>`;
+
+  c.innerHTML=html;
+  window._teamData=teamData;
+  requestAnimationFrame(()=>renderTeamView(teamData[activeTeam],activeTeam));
+}
+
+function switchTeam(team,btn){
+  activeTeam=team;
+  document.querySelectorAll('.team-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderTeamView(window._teamData[team],team);
+}
+
+function renderTeamView(responses,teamName){
+  const tv=document.getElementById('team-view');
+  const names=Object.keys(responses);
+  const total=names.length;
+  if(!total){
+    tv.innerHTML=`<div class="card"><div class="empty-state"><div class="icon">📭</div><p>No responses from ${teamName} yet.</p></div></div>`;
+    return;
+  }
+  const counts={};
+  names.forEach(n=>(responses[n]||[]).forEach(sk=>{counts[sk]=(counts[sk]||0)+1;}));
+  const globalMax=Math.max(...Object.values(counts),1);
+
+  let html=`<div class="pills"><span class="resp-count">${total} response${total!==1?'s':''} from ${teamName}</span>`;
+  names.forEach(n=>{html+=`<span class="pill">👤 ${n}</span>`;});
+  html+=`</div>`;
+
+  const ranked=[];
+  WEEKS.forEach((w,wIdx)=>{
+    HOURS.forEach((hr,hi)=>{
+      w.dates.forEach((date,di)=>{
+        const sk=slotKey(w.key,di,hi);
+        const cnt=counts[sk]||0;
+        if(cnt>0) ranked.push({sk,cnt,label:`${date.d} (${date.day}) ${hr.label} PT`,week:w.label,wIdx});
+      });
+    });
+  });
+  ranked.sort((a,b)=>b.cnt-a.cnt);
+
+  html+=`<div class="card best-section"><h2>Best slots for ${teamName}</h2>`;
+  const top=ranked.slice(0,8);
+  if(!top.length){html+=`<p class="no-responses">No overlapping slots yet.</p>`;}
+  top.forEach(s=>{
+    const pct=Math.round((s.cnt/total)*100);
+    const safeLabel=encodeURIComponent(JSON.stringify({sk:s.sk,label:s.label,week:s.week,wIdx:s.wIdx,team:teamName}));
+    html+=`<div class="best-slot">
+      <div class="best-slot-label">${s.label} <span style="font-size:11px;color:#aaa">— ${s.week}</span></div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="bar-score">${s.cnt}/${total}</div>
+      <button class="confirm-btn" onclick="confirmSlot('${safeLabel}')">Download .ics</button>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  html+=`<div class="card heat-section"><h2>Availability heatmaps <span style="font-size:11px;font-weight:400;color:#aaa">(Pacific Time)</span></h2>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#d1f0e6;border-color:#a3ddd0"></div> 1 person</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#5dcaa5;border-color:#1d9e75"></div> Some</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#16a37f"></div> Most</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#0a6b53"></div> Everyone</div>
+  </div>`;
+
+  WEEKS.forEach(w=>{
+    html+=`<div class="heat-week-title">${w.label}</div><div class="grid-scroll"><div class="grid" style="display:inline-grid;gap:2px;grid-template-columns:58px repeat(${w.dates.length},52px)">`;
+    html+=`<div style="width:58px;height:28px"></div>`;
+    w.dates.forEach(date=>{
+      html+=`<div style="width:52px;height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#888;gap:1px">${date.day}<span style="font-weight:400;color:#bbb;font-size:9px">${date.d}</span></div>`;
+    });
+    HOURS.forEach((hr,hi)=>{
+      html+=`<div style="width:58px;height:22px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:10px;color:#999">${hr.half?'':hr.label}</div>`;
+      w.dates.forEach((date,di)=>{
+        const sk=slotKey(w.key,di,hi);
+        const cnt=counts[sk]||0;
+        const st=heatStyle(cnt,globalMax);
+        html+=`<div style="width:52px;height:22px;border-radius:4px;border:1px solid ${st.border};background:${st.bg};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:${st.color}">${cnt||''}</div>`;
+      });
+    });
+    html+=`</div></div><br>`;
+  });
+  html+=`</div>`;
+  tv.innerHTML=html;
+}
+
+function confirmSlot(encoded){
+  const data=JSON.parse(decodeURIComponent(encoded));
+  generateICS(data);
+}
+
+function generateICS(data){
+  const {label,week,wIdx,team}=data;
+  const parts=label.match(/^(\w+ \d+) \(\w+\) (\d+(?::\d+)?(?:am|pm)) PT$/);
+  if(!parts){alert('Could not parse slot details.');return;}
+  const dateStr=parts[1];
+  const timeStr=parts[2];
+  const monthMap={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+  const [mon,day]=dateStr.split(' ');
+  const mm=monthMap[mon]||'09';
+  const dd=String(day).padStart(2,'0');
+  const timeMatch=timeStr.match(/(\d+)(?::(\d+))?(am|pm)/);
+  let hour=parseInt(timeMatch[1]);
+  const mins=timeMatch[2]||'00';
+  if(timeMatch[3]==='pm'&&hour!==12) hour+=12;
+  if(timeMatch[3]==='am'&&hour===12) hour=0;
+  const hh=String(hour).padStart(2,'0');
+  const endMins=parseInt(mins)+30;
+  const endHH=endMins>=60?String(hour+1).padStart(2,'0'):hh;
+  const endMM=endMins>=60?String(endMins-60).padStart(2,'0'):String(endMins).padStart(2,'0');
+  const dtStart=`2026${mm}${dd}T${hh}${mins}00`;
+  const dtEnd=`2026${mm}${dd}T${endHH}${endMM}00`;
+  const now=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const title=`EIR Intro Call — ${team}`;
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Lab2Market//Intro Calls//EN','CALSCALE:GREGORIAN','METHOD:REQUEST','BEGIN:VEVENT',
+    `DTSTART;TZID=America/Vancouver:${dtStart}`,`DTEND;TZID=America/Vancouver:${dtEnd}`,`DTSTAMP:${now}`,
+    `SUMMARY:${title}`,'DESCRIPTION:Lab2Market Launch — EIR Intro Call. Hosted by SFU VentureLabs.','LOCATION:TBD','STATUS:CONFIRMED',
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`EIR-Intro-Call-${team.replace(/\s+/g,'-')}.ics`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+async function resetResponses(){
+  if(!confirm('This will delete ALL responses across all teams. Are you sure?')) return;
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?id=gt.0`,{
+      method:'DELETE',
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    buildOrgView();
+  } catch(e){alert('Could not clear responses. Try again.');}
+}
+
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='organizer'&&orgUnlocked) buildOrgView();
+}
+</script>
+</body>
+</html>
