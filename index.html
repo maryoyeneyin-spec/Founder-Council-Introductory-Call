@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>L2M Intro Calls — Scheduling</title>
+<title>Lab2Market Launch / FCM Intro Call</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f1;color:#1a1a1a;min-height:100vh}
@@ -46,6 +46,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cell.slot:hover{border-color:#999;background:#eee}
 .cell.slot.on{background:#16a37f;border-color:#128f6e;color:#fff}
 .cell.slot.half-marker{background:#f9f9f7;border-color:#ece9e0}
+.cell.slot.half-marker.on{background:#16a37f;border-color:#128f6e;color:#fff}
 .cell.time-lbl{width:58px;height:22px;font-size:10px;color:#999;justify-content:flex-end;padding-right:8px;cursor:default;background:transparent;border:none}
 .cell.day-lbl{width:52px;height:28px;font-size:10px;color:#888;flex-direction:column;gap:1px;cursor:default;background:transparent;border:none;font-weight:600}
 .cell.day-lbl span{font-weight:400;color:#bbb;font-size:9px}
@@ -125,7 +126,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <body>
 
 <div class="topbar">
-  <div class="topbar-logo">Lab2Market Launch <span>/ EIR Intro Calls</span></div>
+  <div class="topbar-logo">Lab2Market Launch <span>/ FCM Intro Call</span></div>
   <div class="tabs">
     <button class="tab active" onclick="showPage('founder',this)">Availability Form</button>
     <button class="tab" onclick="showPage('organizer',this)">Organizer View</button>
@@ -136,7 +137,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div id="founder" class="page active">
     <div class="page-header">
       <h1>Share your availability</h1>
-      <p>Select every slot that works for you between September 2–16. Your EIR intro call is one hour, Monday–Friday between 8am and 6pm.</p>
+      <p>This is an opportunity to meet with the team (EIR, Founder Council, and assigned team) before the Founder Council meetings which start in October. Select every slot that works for you between September 2–16, Monday–Friday.</p>
     </div>
     <div class="tz-badge">🕐 All times are Pacific Time (PT)</div>
     <div class="instructions">
@@ -144,7 +145,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <ol>
         <li>Enter your name and select your team from the dropdown</li>
         <li>Your available time slots will appear below — click or drag to select every slot that works for you</li>
-        <li>Make sure to fill in all three weeks — Sep 2–4, Sep 7–11, and Sep 14–16</li>
+        <li>Make sure to fill in all three weeks — Sep 2–4, Sep 7–11, and Sep 14–16. Time slots are available from 9am to 4pm PT</li>
         <li>Hit "Save my availability" when you're done — you can come back and update anytime</li>
       </ol>
     </div>
@@ -195,7 +196,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div id="org-inner" style="display:none">
       <div class="page-header">
         <h1>Organizer view</h1>
-        <p>Filter by team to see each team's best available slots for their EIR intro call.</p>
+        <p>Filter by team to see each team's best available slots for their FCM intro call.</p>
       </div>
       <div id="org-content"></div>
     </div>
@@ -217,9 +218,11 @@ const WEEKS = [
 ];
 
 const HOURS = [];
-for(let h=8;h<18;h++){
+for(let h=9;h<=16;h++){
   HOURS.push({label:h===12?'12pm':h<12?h+'am':(h-12)+'pm', val:h, min:0, half:false});
-  HOURS.push({label:(h===12?'12':h<12?h:h-12)+':30'+(h<12?'am':'pm'), val:h, min:30, half:true});
+  if(h < 16){
+    HOURS.push({label:(h===12?'12':h<12?h:h-12)+':30'+(h<12?'am':'pm'), val:h, min:30, half:true});
+  }
 }
 
 let selected = {};
@@ -601,16 +604,16 @@ function generateICS(data){
   const dtStart=`2026${mm}${dd}T${hh}${mins}00`;
   const dtEnd=`2026${mm}${dd}T${endHH}${endMM}00`;
   const now=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
-  const title=`EIR Intro Call — ${team}`;
+  const title=`FCM Intro Call — ${team}`;
   const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Lab2Market//Intro Calls//EN','CALSCALE:GREGORIAN','METHOD:REQUEST','BEGIN:VEVENT',
     `DTSTART;TZID=America/Vancouver:${dtStart}`,`DTEND;TZID=America/Vancouver:${dtEnd}`,`DTSTAMP:${now}`,
-    `SUMMARY:${title}`,'DESCRIPTION:Lab2Market Launch — EIR Intro Call. Hosted by SFU VentureLabs.','LOCATION:TBD','STATUS:CONFIRMED',
+    `SUMMARY:${title}`,'DESCRIPTION:Lab2Market Launch — FCM Intro Call. Hosted by SFU VentureLabs.','LOCATION:TBD','STATUS:CONFIRMED',
     'END:VEVENT','END:VCALENDAR'].join('\r\n');
   const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`EIR-Intro-Call-${team.replace(/\s+/g,'-')}.ics`;
+  a.download=`FCM-Intro-Call-${team.replace(/\s+/g,'-')}.ics`;
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
