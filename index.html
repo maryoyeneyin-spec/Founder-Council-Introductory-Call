@@ -225,6 +225,16 @@ for(let h=9;h<=16;h++){
   }
 }
 
+const TEAM_HOURS = {
+  'OncoNext Therapy': [15, 17]
+};
+
+function getHoursForTeam(team){
+  const range = TEAM_HOURS[team];
+  if(!range) return HOURS;
+  return HOURS.filter(hr => hr.val >= range[0] && hr.val <= range[1]);
+}
+
 let selected = {};
 let orgUnlocked = false;
 let activeTeam = TEAMS[0];
@@ -237,39 +247,51 @@ function formatHour(h,min){
   return min===0?`${dh}${suffix}`:`${dh}:30${suffix}`;
 }
 
-function updateCounter(){
+function updateCounter(team){
   const counter = document.getElementById('slot-counter');
   if(!counter) return;
+  const hours = getHoursForTeam(team||document.getElementById('founder-team').value||'');
   counter.style.display='flex';
   counter.innerHTML = WEEKS.map(w=>{
     const count = w.dates.reduce((acc,date,di)=>{
-      return acc + HOURS.filter((hr,hi)=>selected[slotKey(w.key,di,hi)]).length;
+      return acc + hours.filter((hr,hi)=>selected[slotKey(w.key,di,hi)]).length;
     },0);
     return `<div class="slot-counter-item">${w.label.replace('Week of ','')}: <span>${count} slot${count!==1?'s':''} selected</span></div>`;
   }).join('');
 }
 
-function clearWeek(wkey){
+function clearWeek(wkey, team){
   const week = WEEKS.find(w=>w.key===wkey);
   if(!week) return;
+  const hours = getHoursForTeam(team||document.getElementById('founder-team').value);
   week.dates.forEach((date,di)=>{
-    HOURS.forEach((hr,hi)=>{
+    hours.forEach((hr,hi)=>{
       const sk = slotKey(wkey,di,hi);
       selected[sk]=false;
       const cell = document.querySelector(`[data-key="${sk}"]`);
       if(cell) cell.classList.remove('on');
     });
   });
-  updateCounter();
+  updateCounter(team);
 }
 
-function buildFounderGrids(){
+function buildFounderGrids(team){
   const c = document.getElementById('grids-container');
   c.innerHTML='';
+  const hours = getHoursForTeam(team);
+  const range = TEAM_HOURS[team];
+
+  if(range){
+    const note = document.createElement('div');
+    note.style.cssText='font-size:12px;color:#888;margin-bottom:10px;padding:6px 10px;background:#f5f4f1;border-radius:6px;display:inline-block';
+    note.textContent=`⏰ Your team's available window: ${hours[0].label} – 4pm PT`;
+    c.appendChild(note);
+  }
+
   WEEKS.forEach(w=>{
     const block = document.createElement('div');
     block.className='week-block';
-    block.innerHTML=`<div class="week-title">${w.label} <button class="clear-week-btn" onclick="clearWeek('${w.key}')">Clear week</button></div><div class="scroll-hint">← Swipe to see all days →</div><div class="drag-hint">Click or drag to select slots</div>`;
+    block.innerHTML=`<div class="week-title">${w.label} <button class="clear-week-btn" onclick="clearWeek('${w.key}','${team}')">Clear week</button></div><div class="scroll-hint">← Swipe to see all days →</div><div class="drag-hint">Click or drag to select slots</div>`;
     const scroll = document.createElement('div');
     scroll.className='grid-scroll';
     const grid = document.createElement('div');
@@ -284,7 +306,7 @@ function buildFounderGrids(){
       lbl.innerHTML=`${date.day}<span>${date.d}</span>`;
       grid.appendChild(lbl);
     });
-    HOURS.forEach((hr,hi)=>{
+    hours.forEach((hr,hi)=>{
       const tl=document.createElement('div');
       tl.className='cell time-lbl';
       tl.textContent=hr.label;
@@ -303,13 +325,14 @@ function buildFounderGrids(){
     block.appendChild(scroll);
     c.appendChild(block);
   });
-  updateCounter();
+  updateCounter(team);
 }
 
 function toggleCell(key,cell){
   selected[key]=!selected[key];
   cell.classList.toggle('on',!!selected[key]);
-  updateCounter();
+  const team=document.getElementById('founder-team').value;
+  updateCounter(team);
 }
 
 async function onTeamChange(){
@@ -318,7 +341,7 @@ async function onTeamChange(){
   if(!team) return;
   document.getElementById('saved-banner').classList.remove('visible');
   document.getElementById('confirm-summary').style.display='none';
-  buildFounderGrids();
+  buildFounderGrids(team);
   const name=document.getElementById('founder-name').value.trim();
   if(name) await loadPreviousSelections(name,team);
 }
@@ -405,6 +428,8 @@ function showToast(msg,type){
 }
 
 function showConfirmSummary(){
+  const team=document.getElementById('founder-team').value;
+  const hours=getHoursForTeam(team);
   const summary=document.getElementById('confirm-summary');
   const body=document.getElementById('confirm-summary-body');
   let hasAny=false;
@@ -412,7 +437,7 @@ function showConfirmSummary(){
   WEEKS.forEach(w=>{
     const byDate={};
     w.dates.forEach((date,di)=>{
-      HOURS.forEach((hr,hi)=>{
+      hours.forEach((hr,hi)=>{
         const sk=slotKey(w.key,di,hi);
         if(selected[sk]){
           const dk=`${date.d} (${date.day})`;
@@ -522,8 +547,9 @@ function renderTeamView(responses,teamName){
   html+=`</div>`;
 
   const ranked=[];
+  const teamHours=getHoursForTeam(teamName);
   WEEKS.forEach((w,wIdx)=>{
-    HOURS.forEach((hr,hi)=>{
+    teamHours.forEach((hr,hi)=>{
       w.dates.forEach((date,di)=>{
         const sk=slotKey(w.key,di,hi);
         const cnt=counts[sk]||0;
@@ -562,7 +588,7 @@ function renderTeamView(responses,teamName){
     w.dates.forEach(date=>{
       html+=`<div style="width:52px;height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#888;gap:1px">${date.day}<span style="font-weight:400;color:#bbb;font-size:9px">${date.d}</span></div>`;
     });
-    HOURS.forEach((hr,hi)=>{
+    teamHours.forEach((hr,hi)=>{
       html+=`<div style="width:58px;height:22px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:10px;color:#999">${hr.label}</div>`;
       w.dates.forEach((date,di)=>{
         const sk=slotKey(w.key,di,hi);
