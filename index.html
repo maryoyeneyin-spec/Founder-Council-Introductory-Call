@@ -218,12 +218,14 @@ const WEEKS = [
 ];
 
 const HOURS = [];
-for(let h=9;h<=16;h++){
+for(let h=9;h<=17;h++){
   HOURS.push({label:h===12?'12pm':h<12?h+'am':(h-12)+'pm', val:h, min:0, half:false});
-  if(h < 16){
+  if(h < 17){
     HOURS.push({label:(h===12?'12':h<12?h:h-12)+':30'+(h<12?'am':'pm'), val:h, min:30, half:true});
   }
 }
+// Default visible range is 9am-4pm; full array goes to 5pm for team-specific ranges
+const DEFAULT_HOURS = HOURS.filter(hr => hr.val <= 16);
 
 const TEAM_HOURS = {
   'OncoNext Therapy': [15, 17]
@@ -231,7 +233,7 @@ const TEAM_HOURS = {
 
 function getHoursForTeam(team){
   const range = TEAM_HOURS[team];
-  if(!range) return HOURS;
+  if(!range) return DEFAULT_HOURS;
   return HOURS.filter(hr => hr.val >= range[0] && hr.val <= range[1]);
 }
 
