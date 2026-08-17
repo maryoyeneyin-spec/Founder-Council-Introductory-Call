@@ -582,17 +582,18 @@ function renderTeamView(responses,teamName){
     const whoNo=names.filter(n=>!(responses[n]||[]).includes(s.sk));
     const detailId=`slot-detail-${idx}`;
     const chevronId=`chevron-${idx}`;
-    html+=`<div class="best-slot" onclick="toggleSlotDetail('${detailId}','${chevronId}')">
+    const isUnanimous = whoNo.length === 0;
+    html+=`<div class="best-slot" ${!isUnanimous?`onclick="toggleSlotDetail('${detailId}','${chevronId}')"`:'style="cursor:default"'}>
       <div class="best-slot-label">${s.label} <span style="font-size:11px;color:#aaa">— ${s.week}</span></div>
       <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
       <div class="bar-score">${s.cnt}/${total}</div>
       <button class="confirm-btn" onclick="event.stopPropagation();confirmSlot('${safeLabel}')">Download .ics</button>
-      <span class="slot-chevron" id="${chevronId}">▼</span>
+      ${!isUnanimous?`<span class="slot-chevron" id="${chevronId}">▼</span>`:'<span style="font-size:11px;color:#16a37f;font-weight:600;margin-left:4px">✓ All agree</span>'}
     </div>
-    <div class="slot-detail" id="${detailId}">
+    ${!isUnanimous?`<div class="slot-detail" id="${detailId}">
       ${whoYes.length?`<div class="slot-detail-label">✅ Available</div><div class="slot-detail-row">${whoYes.map(n=>`<span class="slot-person yes">✓ ${n}</span>`).join('')}</div>`:''}
       ${whoNo.length?`<div class="slot-detail-label" style="margin-top:6px">❌ Not available</div><div class="slot-detail-row">${whoNo.map(n=>`<span class="slot-person no">✗ ${n}</span>`).join('')}</div>`:''}
-    </div>`;
+    </div>`:''}`;
   });
   html+=`</div>`;
 
