@@ -109,6 +109,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .status-badge.done{background:#e8f7f2;color:#0f6e56}
 .status-badge.pending{background:#fef9ec;color:#92660a}
 .no-responses{font-size:13px;color:#aaa;padding:1rem 0}
+.best-slot{cursor:pointer}
+.best-slot:hover{background:#fafafa}
+.slot-detail{display:none;padding:10px 12px;border-top:1px solid #f0efe9;background:#fafafa;border-radius:0 0 8px 8px;margin-top:-6px;margin-bottom:6px;border:1px solid #e5e5e0;border-top:none}
+.slot-detail.open{display:block}
+.slot-detail-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.slot-detail-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#888;margin-bottom:5px}
+.slot-person{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:500}
+.slot-person.yes{background:#e8f7f2;color:#0f6e56;border:1px solid #b2dfd1}
+.slot-person.no{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+.slot-chevron{font-size:10px;color:#aaa;margin-left:4px;transition:transform 0.2s}
+.slot-chevron.open{transform:rotate(180deg)}
 @media(max-width:600px){
   .field-row{grid-template-columns:1fr}
   .topbar{padding:0 1rem}
@@ -564,14 +575,23 @@ function renderTeamView(responses,teamName){
   html+=`<div class="card best-section"><h2>Best slots for ${teamName}</h2>`;
   const top=ranked.slice(0,8);
   if(!top.length){html+=`<p class="no-responses">No overlapping slots yet.</p>`;}
-  top.forEach(s=>{
+  top.forEach((s,idx)=>{
     const pct=Math.round((s.cnt/total)*100);
     const safeLabel=encodeURIComponent(JSON.stringify({sk:s.sk,label:s.label,week:s.week,wIdx:s.wIdx,team:teamName}));
-    html+=`<div class="best-slot">
+    const whoYes=names.filter(n=>(responses[n]||[]).includes(s.sk));
+    const whoNo=names.filter(n=>!(responses[n]||[]).includes(s.sk));
+    const detailId=`slot-detail-${idx}`;
+    const chevronId=`chevron-${idx}`;
+    html+=`<div class="best-slot" onclick="toggleSlotDetail('${detailId}','${chevronId}')">
       <div class="best-slot-label">${s.label} <span style="font-size:11px;color:#aaa">— ${s.week}</span></div>
       <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
       <div class="bar-score">${s.cnt}/${total}</div>
-      <button class="confirm-btn" onclick="confirmSlot('${safeLabel}')">Download .ics</button>
+      <button class="confirm-btn" onclick="event.stopPropagation();confirmSlot('${safeLabel}')">Download .ics</button>
+      <span class="slot-chevron" id="${chevronId}">▼</span>
+    </div>
+    <div class="slot-detail" id="${detailId}">
+      ${whoYes.length?`<div class="slot-detail-label">✅ Available</div><div class="slot-detail-row">${whoYes.map(n=>`<span class="slot-person yes">✓ ${n}</span>`).join('')}</div>`:''}
+      ${whoNo.length?`<div class="slot-detail-label" style="margin-top:6px">❌ Not available</div><div class="slot-detail-row">${whoNo.map(n=>`<span class="slot-person no">✗ ${n}</span>`).join('')}</div>`:''}
     </div>`;
   });
   html+=`</div>`;
@@ -603,6 +623,15 @@ function renderTeamView(responses,teamName){
   });
   html+=`</div>`;
   tv.innerHTML=html;
+}
+
+function toggleSlotDetail(detailId, chevronId){
+  const detail=document.getElementById(detailId);
+  const chevron=document.getElementById(chevronId);
+  if(!detail) return;
+  const isOpen=detail.classList.contains('open');
+  detail.classList.toggle('open',!isOpen);
+  if(chevron) chevron.classList.toggle('open',!isOpen);
 }
 
 function confirmSlot(encoded){
