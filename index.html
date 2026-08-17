@@ -559,23 +559,37 @@ function renderTeamView(responses,teamName){
   names.forEach(n=>{html+=`<span class="pill">👤 ${n}</span>`;});
   html+=`</div>`;
 
-  const ranked=[];
   const teamHours=getHoursForTeam(teamName);
+  const weekGroups={};
   WEEKS.forEach((w,wIdx)=>{
+    const weekSlots=[];
     teamHours.forEach((hr,hi)=>{
       w.dates.forEach((date,di)=>{
         const sk=slotKey(w.key,di,hi);
         const cnt=counts[sk]||0;
-        if(cnt>0) ranked.push({sk,cnt,label:`${date.d} (${date.day}) ${hr.label} PT`,week:w.label,wIdx});
+        if(cnt>0) weekSlots.push({sk,cnt,label:`${date.d} (${date.day}) ${hr.label} PT`,week:w.label,wIdx});
       });
     });
+    weekSlots.sort((a,b)=>b.cnt-a.cnt);
+    weekGroups[w.label]=weekSlots;
   });
-  ranked.sort((a,b)=>b.cnt-a.cnt);
 
   html+=`<div class="card best-section"><h2>Best slots for ${teamName}</h2>`;
-  const top=ranked.slice(0,8);
-  if(!top.length){html+=`<p class="no-responses">No overlapping slots yet.</p>`;}
-  top.forEach((s,idx)=>{
+  const hasAnySlots=Object.values(weekGroups).some(g=>g.length>0);
+  if(!hasAnySlots){html+=`<p class="no-responses">No overlapping slots yet.</p>`;}
+  let slotIdx=0;
+  WEEKS.forEach((w,wIdx)=>{
+    const top=weekGroups[w.label];
+    if(!top||!top.length) return;
+    const groupId=`week-group-${wIdx}`;
+    html+=`<div style="margin-bottom:1rem">
+      <div onclick="toggleGroup('${groupId}')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 0;border-bottom:1px solid #e5e5e0;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:600;color:#1a1a1a">${w.label}</span>
+        <span id="${groupId}-chevron" style="font-size:10px;color:#aaa;transition:transform 0.2s">▲</span>
+      </div>
+      <div id="${groupId}">`;
+    top.forEach((s,sIdx)=>{
+    const idx=slotIdx++;
     const pct=Math.round((s.cnt/total)*100);
     const safeLabel=encodeURIComponent(JSON.stringify({sk:s.sk,label:s.label,week:s.week,wIdx:s.wIdx,team:teamName}));
     const whoYes=names.filter(n=>(responses[n]||[]).includes(s.sk));
@@ -594,6 +608,8 @@ function renderTeamView(responses,teamName){
       ${whoYes.length?`<div class="slot-detail-label">✅ Available</div><div class="slot-detail-row">${whoYes.map(n=>`<span class="slot-person yes">✓ ${n}</span>`).join('')}</div>`:''}
       ${whoNo.length?`<div class="slot-detail-label" style="margin-top:6px">❌ Not available</div><div class="slot-detail-row">${whoNo.map(n=>`<span class="slot-person no">✗ ${n}</span>`).join('')}</div>`:''}
     </div>`:''}`;
+    });
+    html+=`</div></div>`;
   });
   html+=`</div>`;
 
@@ -624,6 +640,15 @@ function renderTeamView(responses,teamName){
   });
   html+=`</div>`;
   tv.innerHTML=html;
+}
+
+function toggleGroup(groupId){
+  const group=document.getElementById(groupId);
+  const chevron=document.getElementById(groupId+'-chevron');
+  if(!group) return;
+  const isOpen=group.style.display!=='none';
+  group.style.display=isOpen?'none':'block';
+  if(chevron) chevron.style.transform=isOpen?'rotate(180deg)':'rotate(0deg)';
 }
 
 function toggleSlotDetail(detailId, chevronId){
